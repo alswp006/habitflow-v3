@@ -14,7 +14,12 @@ export default function RootLayout() {
           headerTitleStyle: { fontWeight: "600" },
           contentStyle: { backgroundColor: "#09090b" },
         }}
-      />
+      >
+        <Stack.Screen
+          name="(modal)/habit-editor"
+          options={{ presentation: "modal", headerShown: false }}
+        />
+      </Stack>
     </SafeAreaProvider>
   );
 }

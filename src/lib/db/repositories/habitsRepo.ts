@@ -91,3 +91,27 @@ export function getHabitById(
     .get(id) as HabitRow | undefined;
   return row ? rowToHabit(row) : null;
 }
+
+export function updateHabit(
+  db: Database.Database,
+  id: string,
+  updates: Partial<Omit<Habit, "id" | "createdAt">>
+): Habit {
+  const existing = getHabitById(db, id);
+  if (!existing) throw new Error("Habit not found");
+  const updated: Habit = { ...existing, ...updates };
+  db.prepare(
+    `UPDATE habits SET name=?, icon=?, categoryId=?, frequencyType=?,
+     weeklyTarget=?, isArchived=?, sortOrder=? WHERE id=?`
+  ).run(
+    updated.name,
+    updated.icon,
+    updated.categoryId,
+    updated.frequencyType,
+    updated.weeklyTarget,
+    updated.isArchived ? 1 : 0,
+    updated.sortOrder,
+    id
+  );
+  return updated;
+}

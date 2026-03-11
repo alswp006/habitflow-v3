@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -48,6 +49,8 @@ HabitRow.displayName = "HabitRow";
 
 export default function HabitsScreen() {
   const dbStore = useDbStore();
+  const colorScheme = useColorScheme();
+  const accentColor = colorScheme === "dark" ? "#60a5fa" : "#3b82f6";
   const [habits, setHabits] = useState<Habit[]>([]);
   const [state, setState] = useState<LoadingState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -63,7 +66,9 @@ export default function HabitsScreen() {
     try {
       setState("loading");
       setErrorMessage("");
-      const data = await listActiveHabits(dbStore.db);
+      // Yield to the event loop so loading state renders before the sync DB call
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      const data = listActiveHabits(dbStore.db);
       setHabits(data);
       setState("success");
     } catch (err) {
@@ -80,7 +85,7 @@ export default function HabitsScreen() {
       setState("error");
       setErrorMessage(dbStore.errorMessage);
     }
-  }, [dbStore.status, dbStore.db, loadHabits]);
+  }, [dbStore.status, dbStore.db, loadHabits, dbStore.errorMessage]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -93,11 +98,11 @@ export default function HabitsScreen() {
   };
 
   const handleNewHabit = () => {
-    router.push("/(habit-modal)/create");
+    router.push("/(modal)/habit-editor");
   };
 
   const handleHabitPress = (habitId: string) => {
-    router.push({ pathname: "/(habit-modal)/edit", params: { id: habitId } });
+    router.push({ pathname: "/(modal)/habit-editor", params: { id: habitId } });
   };
 
   return (
