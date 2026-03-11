@@ -1,37 +1,53 @@
 # CLAUDE.md — Project Rules
 
-## CRITICAL: STANDALONE Next.js app
-- INDEPENDENT app, NOT monorepo. Only import from node_modules or src/
-- No @ai-factory/*, drizzle-orm, @libsql/client. Check package.json first
-- DB: use better-sqlite3, localStorage, or in-memory for MVP
-- better-sqlite3 is a native module — NEVER change its version in package.json
-- If you add new native modules (sharp, bcrypt, etc.), list them in dependencies so the pipeline can rebuild them
+## CRITICAL: STANDALONE React Native / Expo app
+- INDEPENDENT app, NOT monorepo. Only import from node_modules, app/, or src/
+- No @ai-factory/*, drizzle-orm, @libsql/client, better-sqlite3. Check package.json first
+- DB: use expo-sqlite (structured data) or expo-secure-store / AsyncStorage (key-value)
 - ALWAYS check existing code before creating new files — avoid duplicates
+- If you add new native modules, list them in dependencies so the pipeline can rebuild them
 
-## CRITICAL: Edge Runtime Restrictions
-- middleware.ts runs in Edge Runtime — it CANNOT import anything that uses Node.js modules (fs, path, crypto, better-sqlite3, bcryptjs)
-- middleware.ts should ONLY check cookies via request.cookies.get() — NEVER import from lib/auth.ts or lib/db.ts
-- API routes and Server Components run in Node.js runtime — they CAN import anything
-- If you need auth checks in middleware, use ONLY cookie-based checks, never DB queries
+## CRITICAL: Expo Router File-Based Routing
+- Route files live in app/ directory — Expo Router maps file paths to routes
+- Route params: use `const { id } = useLocalSearchParams()` (synchronous, already typed)
+- Global params: use `const { q } = useGlobalSearchParams()`
+- Navigation: use `useRouter()` hook — `router.push("/path")`, `router.replace("/path")`, `router.back()`
+- Link component: `import { Link } from "expo-router"` for declarative navigation
+- Auth guards: implement in app/_layout.tsx using `useSegments()` + `useRouter()` redirect logic
 
-## CRITICAL: Next.js 15 Breaking Changes
-- Route params are now async: `{ params }: { params: Promise<{ id: string }> }` then `const { id } = await params;`
-- searchParams are also async: `{ searchParams }: { searchParams: Promise<{ q?: string }> }`
-- NEVER use `params.id` directly — always await first
-- Server Actions must be in files with "use server" or inline with "use server" directive
+## CRITICAL: Auth Pattern (SecureStore + Bearer Token)
+- Auth store at src/store/auth.ts — use `useAuthStore()` — DO NOT recreate
+- Storage wrapper at src/lib/storage.ts — handles SecureStore on native, localStorage on web
+- API client at src/lib/api.ts — pass `token` param for authenticated requests
+- For protected screens: check `useAuthStore(s => s.isAuthenticated)` in _layout.tsx
+- Token is stored under key "auth_token" via storage wrapper — NEVER change this key
+- Auth flow: `login(token)` stores token + sets isAuthenticated, `logout()` removes token
+- Route protection example in _layout.tsx:
+  ```tsx
+  const { isAuthenticated, isLoading } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.replace("/(auth)/login");
+  }, [isAuthenticated, isLoading]);
+  ```
 
-## CRITICAL: Client vs Server Components
-- Hooks (useState, useEffect, useRef) require "use client" at the TOP of the file
-- Event handlers (onClick, onChange, onSubmit) require "use client"
-- Server Components CANNOT use hooks or event handlers
-- When in doubt, add "use client" — it's safer than missing it
+## CRITICAL: All Components Run on Device (No Server Components)
+- ALL components in React Native are "client" components — hooks work everywhere
+- useState, useEffect, useRef, useCallback are all available in every component
+- Platform-specific code: use `Platform.OS === "ios" | "android" | "web"` checks
+- Async operations: always use useEffect + useState (no server-side data fetching)
+- Navigation must use expo-router's Link or useRouter() — no web <a> tags
 
 ## Commands
-- pnpm install --ignore-workspace / build / typecheck / test / dev
+- `pnpm install --ignore-workspace` — install deps
+- `pnpm dev` → `expo start` — start dev server
+- `pnpm build` → `expo export` — export for web
+- `pnpm build:ios` → `eas build --platform ios`
+- `pnpm build:android` → `eas build --platform android`
+- `pnpm typecheck` → `tsc --noEmit` — fix ALL errors before finishing
+- `pnpm test` → `vitest run`
 - IMPORTANT: Always use --ignore-workspace with pnpm to avoid monorepo interference
-- Build: npx next build --experimental-app-only (verify it passes before finishing)
-- IMPORTANT: Always use --experimental-app-only with next build to avoid Turbopack Pages Router errors in Next.js 15.5+
-- Typecheck: npx tsc --noEmit (fix ALL errors before finishing)
 
 ## Testing
 - Write tests in src/__tests__/packet-{id}.test.ts alongside your implementation
@@ -40,130 +56,94 @@
 - Run pnpm test + pnpm typecheck before finishing
 
 ### Test Best Practices (CRITICAL — follow these to avoid failures)
-- DB cleanup: In afterEach/beforeEach, delete child tables BEFORE parent tables (foreign key order)
-  Example: db.prepare("DELETE FROM posts").run(); THEN db.prepare("DELETE FROM categories").run();
 - Test isolation: Each test must create its own test data — never depend on data from other tests
-- Test isolation: Use user-scoped cleanup (WHERE userId = ?) instead of global DELETE FROM — tests run in PARALLEL so global deletes destroy other test files' data
-- Test isolation: Each test within a describe block must set up its own data — never assume data from a prior test still exists
-- Unique data: Use UNIQUE emails per test FILE (e.g., `test-p0001-${Date.now()}@example.com`) to avoid UNIQUE constraint violations across parallel test files
-- Never use hardcoded IDs (e.g., "test-category-1") in raw SQL — always use actual IDs returned from create functions
-- better-sqlite3: All DB calls are SYNCHRONOUS — use db.prepare().run(), NOT await db.prepare().run()
-- Timestamps: Never rely on insertion order for "latest" queries — add `rowid DESC` as tiebreaker in ORDER BY clauses (e.g., ORDER BY createdAt DESC, rowid DESC)
-- API route tests: Use new Request() with proper headers, test both success and error cases
-- Auth in tests: Use createSessionToken(userId) from @/lib/auth — set it as cookie header in Request
-
-## CRITICAL: Auth Cookie Pattern
-- Cookie name is "session_token" — this is set by createSession() in src/lib/auth.ts
-- Middleware checks cookies via request.cookies.get("session_token") — MUST match
-- Signup returns status 201, Login returns status 200
-- If template auth already exists (src/lib/auth.ts), use createSession()/destroySession() — do NOT reimplement
-- For NEW API routes that need auth, read cookie from request headers:
-  ```
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const match = cookieHeader.match(/session_token=([^;]+)/);
-  const token = match?.[1] ?? null;
-  // Then validate: import { getSessionUserId } from "@/lib/auth"
-  const userId = token ? getSessionUserId(token) : null;
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  ```
-- NEVER change the cookie name — middleware.ts, auth.ts, and all API routes must agree on "session_token"
-- For tests: use createSessionToken(userId) from @/lib/auth to create test sessions without cookies() API
+- Test isolation: Tests run in PARALLEL — use unique identifiers per test file to avoid collisions
+- Unique data: Use unique keys per test FILE (e.g., `test-p0001-${Date.now()}`) to avoid conflicts
+- Storage tests: mock expo-secure-store and Platform at module level — don't call native APIs in tests
+- Async: storage and API calls are ASYNC — always await them in tests
+- Error cases: test both success and error/rejection paths
 
 ## Code Style
-- TypeScript strict, Next.js 15 App Router, all files in src/
-- Tailwind CSS only (no inline styles), no .eslintrc files
+- TypeScript strict, Expo Router (app/ dir), source in src/, all files typed
+- NativeWind for styling (className prop with Tailwind classes) — no StyleSheet.create unless needed
+- No inline styles unless dynamic values are required
 - All imports must resolve — verify with pnpm typecheck
 
 ## Code Quality (CRITICAL — your code will be reviewed by AI)
 - Single Responsibility: Each file/component should do ONE thing. If a component exceeds ~150 lines, extract sub-components.
 - DRY: Before creating new helpers, check existing code in src/lib/ and src/components/. Import and reuse.
-- Error Handling: Every fetch/API call must have try/catch. Show loading states (skeleton/spinner) during async ops. Show user-friendly error messages with retry option.
+- Error Handling: Every API call must have try/catch. Show loading states (ActivityIndicator) during async ops. Show user-friendly error messages.
 - TypeScript: Use explicit return types for exported functions. NEVER use `any` — use `unknown` and narrow with type guards.
 - Naming: Descriptive names (getUserById not getData). Constants in UPPER_SNAKE_CASE. Components in PascalCase.
 - No Magic Numbers: Extract into named constants (MAX_ITEMS = 10, DEBOUNCE_MS = 300).
-- Accessibility: aria-label on icon-only buttons. Semantic HTML (nav, main, section, article). Link form labels to inputs.
-- Performance: Avoid unnecessary re-renders (useCallback/useMemo where appropriate). Use dynamic imports for heavy components. Lazy-load images below fold.
+- Accessibility: accessibilityLabel on icon-only Pressables. accessibilityRole on interactive elements. Minimum touch target: 48×48dp.
+- Performance: Avoid unnecessary re-renders (useCallback/useMemo where appropriate). Use FlatList for scrollable lists — never ScrollView + .map() for long lists.
 - Pattern Consistency: Match existing codebase patterns. Don't introduce new patterns when existing ones work.
 
 ## Common Build Error Prevention
-- Every 'use client' component that imports a Server Component will fail — restructure
-- Dynamic imports with `import()` in client components must use next/dynamic
-- Image component: use next/image with width+height or fill prop
-- Link component: import from next/link, no nested <a> tags
-- Forms: use native form + server action, or "use client" + fetch
-- JSON imports: add "resolveJsonModule": true in tsconfig if needed
-- Missing types: check @types/ packages are in devDependencies
+- KeyboardAvoidingView: wrap forms with behavior="padding" on iOS, "height" on Android
+- SafeAreaView: always use from react-native-safe-area-context (not react-native)
+- Images: use `<Image source={{ uri: url }} style={{ width, height }} />` from react-native
+- FlatList vs ScrollView: FlatList for dynamic lists (virtualized), ScrollView for fixed content
+- useWindowDimensions(): use for responsive layouts instead of hardcoded pixel values
+- Platform checks: `Platform.OS === "web"` for web-specific fallbacks
 
-## Design System — shadcn/ui + "Linear meets Notion" aesthetic
-Read `.claude/skills/frontend-design/SKILL.md` for full aesthetic direction.
+## Design System — NativeWind + "Linear meets Notion" aesthetic
 
-### Component Library (ALWAYS use — never raw HTML buttons/inputs/cards)
+### Component Library (ALWAYS use — never raw View/Text/Pressable for interactive elements)
 ```tsx
-import { Button } from "@/components/ui/button"    // variant: default|outline|ghost|secondary|destructive
+import { Button } from "@/components/ui/button"    // variant: default|secondary|ghost|destructive|outline
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"       // variant: default|secondary|destructive|success|warning|outline
-import { cn } from "@/lib/utils"                    // Class merging: cn("base", conditional && "extra")
+import { Card } from "@/components/ui/card"
+import { cn } from "@/lib/utils"                    // NativeWind class merging
 ```
-- Button asChild pattern for links: `<Button asChild><Link href="/x" className="no-underline">Go</Link></Button>`
-- Ghost nav links: `<Button variant="ghost" size="sm" asChild>`
+- Button always sets accessibilityRole="button" and min-h-[48px] touch target
+- For nav links: `<Link href="/path" asChild><Button label="Go" variant="ghost" /></Link>`
 
 ### Layout Rules
-- Page wrapper: NO max-width (full-bleed backgrounds)
-- Each section: `<section className="w-full py-20"><div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8">{content}</div></section>`
-- Hero: min-h-[70vh] flex items-center, gradient bg spans full width
-- ALL sections same max-w on wrapper; constrain inner content separately
-- Responsive: grid-cols-1 md:grid-cols-2 lg:grid-cols-3, flex-col md:flex-row
+- Root screen wrapper: `<SafeAreaView className="flex-1 bg-bg">`
+- Scrollable content: `<ScrollView contentContainerClassName="px-4 py-6 gap-4">`
+- Section padding: `px-4` (16dp) horizontal, `py-6` (24dp) vertical
+- Responsive: use `useWindowDimensions()` for width-based breakpoints on web/tablet
+- Lists: always `<FlatList>` with `ItemSeparatorComponent` — never ScrollView + .map()
+- Forms: wrap in `<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>`
 
-### CRITICAL: CSS Specificity (Tailwind v4) — DO NOT VIOLATE
-- `@import "tailwindcss"` puts utilities in `@layer utilities`
-- Any CSS OUTSIDE `@layer` has HIGHER specificity → silently overrides ALL Tailwind utilities (pt-16, px-4, gap-6, mb-4, text-white, etc.)
-- This means `* { padding: 0 }` outside @layer will BREAK EVERY LAYOUT IN THE APP
-- ALWAYS wrap base/reset/element styles in `@layer base { }`
-- ALWAYS wrap custom utility classes in `@layer components { }`
-- ONLY `:root` (CSS variable declarations) and scrollbar pseudo-elements may be outside @layer
-- If you edit globals.css: VERIFY every non-:root rule is inside an @layer block
+### Colors (NativeWind Tailwind classes — defined in tailwind.config.js)
+- Backgrounds: `bg-bg`, `bg-bg-elevated`, `bg-bg-card`, `bg-bg-input`
+- Text: `text-text`, `text-text-secondary`, `text-text-muted`
+- Accent: `bg-accent`, `bg-accent-soft`, `text-accent`
+- Borders: `border-border`, `border-border-hover` (use with `border` class)
+- Semantic: `bg-success-soft`, `bg-danger-soft`, `bg-warning-soft`
+- Never hardcode hex values in className — use the token names above
 
-### Colors (CSS vars ONLY — never hardcode hex)
-- bg: var(--bg), var(--bg-elevated), var(--bg-card), var(--bg-input)
-- text: var(--text), var(--text-secondary), var(--text-muted)
-- accent: var(--accent), var(--accent-soft)
-- border: var(--border), var(--border-hover)
-- semantic: var(--success-soft), var(--danger-soft), var(--warning-soft)
+### Icons
+- Use lucide-react-native: `import { IconName } from "lucide-react-native"`
+- Always pass size and color props: `<Heart size={20} color="#f0f0f3" />`
+- Wrap icon-only Pressables with accessibilityLabel
 
 ### Anti-patterns
-- Cramped layouts — generous whitespace, never tight micro-spacing
-- Flat hierarchy — vary size, weight, and color
-- Unstyled elements — every button/link needs rounded corners + hover state + transition
-- Narrow trapped content — full-bleed sections with constrained inner content
-- Raw HTML for buttons/inputs/cards — ALWAYS use shadcn components from @/components/ui/
+- ScrollView with .map() for long lists — use FlatList
+- Hardcoded pixel dimensions — use dp units and useWindowDimensions()
+- Missing touch targets — every Pressable needs min 48×48dp
+- No loading states — always show ActivityIndicator during async ops
+- Raw Pressable/Text for buttons/inputs — use components from @/components/ui/
 
 ## Navigation
-- Every page reachable from header nav. Login<->Signup cross-linked.
-- Layout at src/app/layout.tsx — UPDATE it, don't recreate.
-- Nav component at src/components/ui/nav.tsx — add links for new pages here.
+- Every screen reachable from tab bar or stack navigation
+- Tab layout at app/(tabs)/_layout.tsx — add new tabs here
+- Root layout at app/_layout.tsx — UPDATE it, don't recreate
+- Auth screens in app/(auth)/ — protected screens in app/(tabs)/ or app/(app)/
 
 ## Final Checklist (run before finishing)
 1. pnpm typecheck — zero errors
 2. pnpm test — all tests pass
-3. npx next build — builds successfully
-4. No "use client" missing warnings
-5. No unresolved imports
-
-## Preserved Template Rules
-
+3. No unresolved imports
+4. All Pressables have accessibilityLabel and min 48×48dp
+5. Async operations have loading + error states
 
 ## Pre-built Auth (DO NOT RECREATE)
-- Login screen at app/login.tsx — email + password form
-- Auth store handles: login, signup, logout, token persistence
-- API client auto-attaches auth token to requests
-- For protected screens: check auth.isAuthenticated in component
-
-## Navigation (already configured)
-- Tab layout at app/(tabs)/_layout.tsx
-- Stack navigation at app/_layout.tsx
-- Add new tabs: create file in app/(tabs)/ + add to tab config
-- Modal screens: create in app/(modal)/
-
+- Auth store at src/store/auth.ts — useAuthStore() with login/logout/loadToken
+- Storage wrapper at src/lib/storage.ts — SecureStore on native, localStorage on web
+- API client at src/lib/api.ts — apiFetch() with optional Bearer token
+- Login screen at app/(auth)/login.tsx — email + password form
+- For protected screens: check isAuthenticated in _layout.tsx with useSegments() redirect
