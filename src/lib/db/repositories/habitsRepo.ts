@@ -27,9 +27,9 @@ function rowToHabit(row: HabitRow): Habit {
   };
 }
 
-export async function listActiveHabits(
+export function listActiveHabits(
   db: Database.Database
-): Promise<Habit[]> {
+): Habit[] {
   const rows = db
     .prepare(
       `SELECT id, name, icon, categoryId, frequencyType, weeklyTarget,
@@ -42,9 +42,9 @@ export async function listActiveHabits(
   return rows.map(rowToHabit);
 }
 
-export async function listAllHabits(
+export function listAllHabits(
   db: Database.Database
-): Promise<Habit[]> {
+): Habit[] {
   const rows = db
     .prepare(
       `SELECT id, name, icon, categoryId, frequencyType, weeklyTarget,
@@ -56,10 +56,10 @@ export async function listAllHabits(
   return rows.map(rowToHabit);
 }
 
-export async function insertHabit(
+export function insertHabit(
   db: Database.Database,
   habit: Habit
-): Promise<Habit> {
+): Habit {
   db.prepare(
     `INSERT INTO habits
        (id, name, icon, categoryId, frequencyType, weeklyTarget, isArchived, createdAt, sortOrder)
@@ -78,10 +78,10 @@ export async function insertHabit(
   return habit;
 }
 
-export async function getHabitById(
+export function getHabitById(
   db: Database.Database,
   id: string
-): Promise<Habit | null> {
+): Habit | null {
   const row = db
     .prepare(
       `SELECT id, name, icon, categoryId, frequencyType, weeklyTarget,
