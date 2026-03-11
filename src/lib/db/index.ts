@@ -1,4 +1,4 @@
-import * as SQLite from "expo-sqlite";
+import BetterSqlite3 from "better-sqlite3";
 import { runMigrations as _runMigrations } from "./migrations";
 
 const DEFAULT_DB_NAME = "habitflow.db";
@@ -9,18 +9,14 @@ const DEFAULT_DB_NAME = "habitflow.db";
  * No migrations or writes happen here — this function has no side effects
  * beyond opening the file.
  */
-export async function openDb(
-  name: string = DEFAULT_DB_NAME
-): Promise<SQLite.SQLiteDatabase> {
-  return SQLite.openDatabaseAsync(name);
+export function openDb(name: string = DEFAULT_DB_NAME): BetterSqlite3.Database {
+  return new BetterSqlite3(name);
 }
 
 /**
  * Run all pending migrations against the given database instance.
  * Idempotent: already-applied migrations are skipped.
  */
-export async function runMigrations(
-  db: SQLite.SQLiteDatabase
-): Promise<void> {
-  await _runMigrations(db);
+export function runMigrations(db: BetterSqlite3.Database): void {
+  _runMigrations(db);
 }
