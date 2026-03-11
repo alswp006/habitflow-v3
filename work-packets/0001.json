@@ -1,0 +1,31 @@
+{
+  "id": "0001",
+  "title": "Core entity + view model TypeScript types",
+  "epic": "Epic 1 (Data/Store)",
+  "task": {
+    "description": "Add strict, runtime-free TypeScript types for core entities and UI view models used by Today/Habits/Calendar/Stats. Types must match SPEC field names/types and compile under TypeScript strict mode.",
+    "acceptance_criteria": [
+      "`src/lib/types/entities.ts` exports `FrequencyType`, `Habit`, `Category`, `CompletionRecord`, `StreakState` exactly matching SPEC (field names/types)",
+      "`src/lib/types/viewModels.ts` exports `HabitWithCategory`, `TodayHabitRow`, `CalendarDaySummary`, `StatsPeriod`, `StatsSummary` with no runtime code (type-only exports)",
+      "`tsc --noEmit` succeeds with TypeScript strict mode enabled"
+    ]
+  },
+  "covers": [
+    "F1-AC1",
+    "F3-AC1"
+  ],
+  "files": [
+    "src/lib/types/entities.ts",
+    "src/lib/types/viewModels.ts"
+  ],
+  "definition_of_done": [
+    "Types are exported and imported without runtime side effects",
+    "No `const`, functions, or DB code added in these files",
+    "Project builds and typechecks successfully"
+  ],
+  "depends_on": [],
+  "db_schema": "export type FrequencyType = \"daily\" | \"weekly\";\nexport interface Habit { id:string; name:string; icon:string; categoryId:string|null; frequencyType:FrequencyType; weeklyTarget:number|null; isArchived:boolean; createdAt:string; sortOrder:number; }\nexport interface Category { id:string; name:string; color:string; }\nexport interface CompletionRecord { id:string; habitId:string; date:string; completed:boolean; completedAt:string|null; }\nexport interface StreakState { habitId:string; currentStreak:number; bestStreak:number; lastCompletedDate:string|null; }",
+  "api_contract": "",
+  "dependencies": [],
+  "ui_requirements": ""
+}

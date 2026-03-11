@@ -1,0 +1,42 @@
+{
+  "id": "0003",
+  "title": "Local repositories + Today loader + local date + streak compute",
+  "epic": "Epic 1 (Data/Store)",
+  "task": {
+    "description": "Implement SQLite-only repositories for categories/habits/completions plus a single Today data loader. Include local date helpers (`YYYY-MM-DD`) and pure streak computation for daily/weekly habits. All errors must surface (not swallowed).",
+    "acceptance_criteria": [
+      "`insertCompletion(record)` throws an error with `name === \"UniqueConstraintError\"` when inserting a duplicate `(habitId,date)` and does not return a record",
+      "`setCompletion(habitId,date,completed)` creates or updates the row and sets `completedAt` to ISO string when `completed=true`, otherwise `null`",
+      "`listActiveHabits()` returns only `isArchived=0` habits ordered by `sortOrder ASC, createdAt ASC`",
+      "`toLocalDateString()` returns a string matching regex `^\\d{4}-\\d{2}-\\d{2}$` using local device time",
+      "`computeStreakState()` is pure (no SQLite calls) and returns `currentStreak/bestStreak/lastCompletedDate` consistent with SPEC rules for daily and weekly",
+      "`loadTodayData(today)` resolves with `{habits,categories,completions}` or throws on SQLite errors (caller can show error state)"
+    ]
+  },
+  "covers": [
+    "F1-AC2",
+    "F1-AC3",
+    "F2-AC7",
+    "F3-AC2"
+  ],
+  "files": [
+    "src/lib/db/repositories/categoriesRepo.ts",
+    "src/lib/db/repositories/habitsRepo.ts",
+    "src/lib/db/repositories/completionsRepo.ts",
+    "src/lib/db/queries/todayQueries.ts",
+    "src/lib/streaks/computeStreak.ts"
+  ],
+  "definition_of_done": [
+    "All repo functions are async, SQLite-only, and throw on failure",
+    "No network calls are introduced",
+    "App compiles and repos can be imported by screens"
+  ],
+  "depends_on": [
+    "0001",
+    "0002"
+  ],
+  "db_schema": "",
+  "api_contract": "",
+  "dependencies": [],
+  "ui_requirements": ""
+}

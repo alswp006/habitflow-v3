@@ -1,0 +1,35 @@
+{
+  "id": "0008",
+  "title": "Habit editor modal: create/edit form + validation",
+  "epic": "Epic 3 (Screens)",
+  "task": {
+    "description": "Add a modal screen for creating and editing a habit with name, icon, frequency type, weekly target validation (1–7), and optional category selection. Use KeyboardAvoidingView so the Save button remains tappable with keyboard open.",
+    "acceptance_criteria": [
+      "Screen root uses `SafeAreaView` and form is wrapped in `KeyboardAvoidingView` with `behavior` conditional on `Platform.OS`",
+      "Creating a daily habit with name length 1–50 and icon length 1–20 saves a habit with `frequencyType=\"daily\"`, `weeklyTarget=null`, `isArchived=false` and returns to previous screen",
+      "Selecting weekly frequency requires an integer weeklyTarget 1..7; when valid, habit is saved with `frequencyType=\"weekly\"` and `weeklyTarget` set",
+      "If weeklyTarget is empty or outside 1..7, Save does not call any repo write and an inline error text is shown",
+      "When editing with an `id` param, the form loads existing values and Save calls `updateHabit()`; on success it navigates back"
+    ]
+  },
+  "covers": [
+    "F2-AC1",
+    "F2-AC2",
+    "F2-AC3"
+  ],
+  "files": [
+    "app/(modal)/habit-editor.tsx"
+  ],
+  "definition_of_done": [
+    "Form is usable on iOS/Android with keyboard open",
+    "All primary CTAs have min-h-[48px]",
+    "TypeScript strict build passes"
+  ],
+  "depends_on": [
+    "0003"
+  ],
+  "db_schema": "",
+  "api_contract": "",
+  "dependencies": [],
+  "ui_requirements": "Modal layout: title (New Habit/Edit Habit), Input for name, icon picker (simple Input + quick emoji buttons), segmented buttons for daily/weekly, conditional numeric Input for weekly target, category selector list (nullable), Save/Cancel buttons fixed at bottom with keyboard avoiding."
+}

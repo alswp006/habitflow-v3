@@ -1,0 +1,31 @@
+{
+  "id": "0005",
+  "title": "API no-network client shim (compile-time friendly)",
+  "epic": "Epic 2 (API)",
+  "task": {
+    "description": "Provide a small, typed shim that can be imported instead of real API calls in MVP. Any attempt to call it throws a LocalOnlyMvpError. This keeps the API layer present without adding endpoints or network behavior.",
+    "acceptance_criteria": [
+      "`src/lib/api/noNetworkClient.ts` exports `apiGet()` and `apiPost()` helpers that always throw via `throwIfApiCalled()`",
+      "Calling either helper throws an error with `name === \"LocalOnlyMvpError\"`",
+      "No changes are made to the template API client; this file is additive and the app compiles"
+    ]
+  },
+  "covers": [
+    "F1-AC3"
+  ],
+  "files": [
+    "src/lib/api/noNetworkClient.ts"
+  ],
+  "definition_of_done": [
+    "No network requests occur from this module",
+    "Functions are typed and can be imported without runtime side effects",
+    "TypeScript strict compilation passes"
+  ],
+  "depends_on": [
+    "0004"
+  ],
+  "db_schema": "",
+  "api_contract": "GET/POST (shim) → throws LocalOnlyMvpError (MVP has no cloud API)",
+  "dependencies": [],
+  "ui_requirements": ""
+}

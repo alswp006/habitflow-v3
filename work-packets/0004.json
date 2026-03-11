@@ -1,0 +1,31 @@
+{
+  "id": "0004",
+  "title": "API local-only guard module (MVP: no cloud sync)",
+  "epic": "Epic 2 (API)",
+  "task": {
+    "description": "Add a lintable, explicit module that documents and enforces the MVP constraint of no network usage for habit data. This provides a clear import path for any accidental API usage to fail fast in development.",
+    "acceptance_criteria": [
+      "`src/lib/api/localOnly.ts` exports `LOCAL_ONLY_MVP = true` and `throwIfApiCalled(feature: string): never`",
+      "`throwIfApiCalled()` throws an `Error` with `name === \"LocalOnlyMvpError\"` and message containing the passed `feature` string",
+      "No existing screens or repos are required to import this module for the app to compile"
+    ]
+  },
+  "covers": [
+    "F1-AC3"
+  ],
+  "files": [
+    "src/lib/api/localOnly.ts"
+  ],
+  "definition_of_done": [
+    "Module has no side effects on import",
+    "TypeScript strict compilation passes",
+    "No app behavior changes until imported elsewhere"
+  ],
+  "depends_on": [
+    "0001"
+  ],
+  "db_schema": "",
+  "api_contract": "N/A (local-only MVP). `throwIfApiCalled(feature)` → throws LocalOnlyMvpError",
+  "dependencies": [],
+  "ui_requirements": ""
+}

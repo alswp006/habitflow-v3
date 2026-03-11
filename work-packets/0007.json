@@ -1,0 +1,35 @@
+{
+  "id": "0007",
+  "title": "Habits screen: active list + loading/error + pull-to-refresh",
+  "epic": "Epic 3 (Screens)",
+  "task": {
+    "description": "Create Habits tab screen that lists active (non-archived) habits from SQLite ordered by sortOrder/createdAt. Provide loading indicator, visible error state with Retry, empty state CTA to create a habit, and pull-to-refresh to fully reload from SQLite.",
+    "acceptance_criteria": [
+      "Screen root uses `SafeAreaView`; the list is a `FlatList` with `RefreshControl`",
+      "On initial load, `ActivityIndicator` renders and no stale rows from prior state are shown",
+      "On repository error, a visible error message and a \"Retry\" button are shown; tapping Retry re-runs the load",
+      "Empty state shows text + a Button that navigates to the habit editor modal route",
+      "Each row main tap area has `min-h-[48px]`; tapping a row navigates to edit modal with the habit id as a param"
+    ]
+  },
+  "covers": [
+    "F2-AC6",
+    "F2-AC8",
+    "F2-AC7"
+  ],
+  "files": [
+    "app/(tabs)/habits.tsx"
+  ],
+  "definition_of_done": [
+    "List refresh and navigation compile on both iOS and Android",
+    "No ScrollView is used for the dynamic list",
+    "TypeScript strict build passes"
+  ],
+  "depends_on": [
+    "0003"
+  ],
+  "db_schema": "",
+  "api_contract": "",
+  "dependencies": [],
+  "ui_requirements": "SafeAreaView p-4; header row with title and \"New\" button; FlatList gap-3; row: icon + name + meta (daily/weekly). States: loading, error+retry, empty+CTA, pull-to-refresh."
+}

@@ -1,0 +1,38 @@
+{
+  "id": "0006",
+  "title": "Today screen: grouped checklist + toggle completion + refresh",
+  "epic": "Epic 3 (Screens)",
+  "task": {
+    "description": "Implement Today checklist UI: load active habits, categories, and today completion records; render a grouped FlatList with category headers; allow one-tap completion toggle with optimistic UI only after persistence succeeds; include pull-to-refresh + loading/error/empty states.",
+    "acceptance_criteria": [
+      "Screen root uses `SafeAreaView` and list uses `FlatList` with `RefreshControl` (no `ScrollView` wrapping the list)",
+      "When data is loading, an `ActivityIndicator` is visible and no habit rows are rendered until load resolves",
+      "Rows are grouped by category name, with a \"No Category\" header for `categoryId=null`",
+      "Tapping a row toggle calls `setCompletion()` and updates the completed UI state only after the promise resolves; if it rejects, the row remains in its prior state",
+      "On toggle failure, an on-screen error message and a \"Retry\" button are shown; tapping Retry re-attempts the last toggle",
+      "Pull-to-refresh re-runs the local load and stops the refresh spinner within 2 seconds of the promise settling (success or error)",
+      "All interactive row controls meet min hit size by applying `min-h-[48px]` to the Pressable area"
+    ]
+  },
+  "covers": [
+    "F3-AC1",
+    "F3-AC2",
+    "F3-AC3",
+    "F3-AC4"
+  ],
+  "files": [
+    "app/(tabs)/today.tsx"
+  ],
+  "definition_of_done": [
+    "No crashes when DB is ready and tables are empty (empty state renders)",
+    "No network calls added",
+    "TypeScript strict build passes"
+  ],
+  "depends_on": [
+    "0003"
+  ],
+  "db_schema": "",
+  "api_contract": "",
+  "dependencies": [],
+  "ui_requirements": "SafeAreaView p-4; title text-3xl font-bold; FlatList of mixed rows (header + habit). Habit row: left icon + name, right toggle/checkbox. States: loading spinner, empty state (icon + text + CTA to create habit), error with retry, pull-to-refresh."
+}
